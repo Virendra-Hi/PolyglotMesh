@@ -1,9 +1,11 @@
+
 package com.infotact.polyglot_mesh;
+
+import com.infotact.polyglot_mesh.dto.ExecutionRequest;
+import com.infotact.polyglot_mesh.dto.ExecutionResponse;
 
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/polyglot")
@@ -12,16 +14,46 @@ public class CodeController {
 
     private final PolyglotEngineService polyglotEngineService;
 
-    public CodeController(PolyglotEngineService polyglotEngineService) {
+    public CodeController(
+            PolyglotEngineService polyglotEngineService
+    ) {
         this.polyglotEngineService = polyglotEngineService;
     }
 
-    @PostMapping("/run")
-    public Mono<String> runCode(@RequestBody Map<String, String> payload) {
-        String language = payload.get("language"); // e.g., "python", "js", "ruby"
-        String code = payload.get("code");
+    // New generic execution API
+    @PostMapping("/execute")
+    public Mono<ExecutionResponse> executeCode(
+            @RequestBody ExecutionRequest request
+    ) {
+        if (request == null) {
+            return Mono.just(new ExecutionResponse(
+                    false, null, "", "Request body is required.", 0
+            ));
+        }
 
-        String output = polyglotEngineService.executeSnippet(language, code);
+        ExecutionResponse response =
+                polyglotEngineService.execute(
+                        request.language(),
+                        request.code()
+                );
+
+        return Mono.just(response);
+    }
+
+    // Existing API preserved for backward compatibility
+    @PostMapping("/run")
+    public Mono<String> runCode(
+            @RequestBody ExecutionRequest request
+    ) {
+        if (request == null) {
+            return Mono.just("Request body is required.");
+        }
+
+        String output = polyglotEngineService.executeSnippet(
+                request.language(),
+                request.code()
+        );
+
         return Mono.just(output);
     }
 }
